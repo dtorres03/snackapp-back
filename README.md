@@ -50,7 +50,7 @@ Si vas a clonar este proyecto por primera vez, sigue estos pasos:
 | Método | Endpoint | Descripción | Auth Requerida |
 | :--- | :--- | :--- | :--- |
 | **POST** | `/api/users/` | Registro de nuevo usuario (Sign up) | No |
-| **POST** | `/api/token/` | Obtener Tokens Access y Refresh (Login) | No |
+| **POST** | `/api/login/` | Obtener Tokens Access y Refresh (Login) | No |
 | **POST** | `/api/token/refresh/` | Generar nuevo Access Token | Refresh Token |
 | **GET** | `/api/users/` | Listar todos los usuarios registrados | Token Access |
 | **GET** | `/api/users/{id}/` | Ver detalle de un usuario específico | Token Access |

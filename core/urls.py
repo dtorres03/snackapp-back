@@ -20,7 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from users.views import UserViewSet
-from videos.views import VideoViewSet, CategoryViewSet
+from videos.views import VideoViewSet, CategoryViewSet, SeriesViewSet
 
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -32,6 +32,7 @@ router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'videos', VideoViewSet, basename='video')
 router.register(r'categories', CategoryViewSet, basename='category')
+router.register(r'series', SeriesViewSet, basename='serie')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

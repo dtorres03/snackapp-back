@@ -55,3 +55,41 @@ class VideoSerializer(serializers.ModelSerializer):
 
     def get_thumbnail_path(self, obj):
         return obj.thumbnail.name if obj.thumbnail else None
+
+
+class SeriesVideoSerializer(serializers.ModelSerializer):
+    """Serializer liviano para los episodios embebidos dentro de una Serie."""
+    video_path = serializers.SerializerMethodField()
+    thumbnail_path = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Video
+        fields = [
+            'id', 'title', 'description',
+            'season_number', 'episode_number',
+            'video_path', 'thumbnail_path',
+            'created_at',
+        ]
+
+    def get_video_path(self, obj):
+        return obj.video_file.name if obj.video_file else None
+
+    def get_thumbnail_path(self, obj):
+        return obj.thumbnail.name if obj.thumbnail else None
+
+
+class SeriesSerializer(serializers.ModelSerializer):
+    """Serializer para el listado de Series con paginación.
+    Incluye 'id', 'title', 'category' (ID) y los primeros 5 videos de cada serie.
+    """
+    category = serializers.PrimaryKeyRelatedField(read_only=True)
+    videos = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Serie
+        fields = ['id', 'title', 'category', 'videos']
+
+    def get_videos(self, obj):
+        # Solo los primeros 5 episodios respetando el ordering del modelo (season, episode)
+        episodes = obj.episodes.all()[:5]
+        return SeriesVideoSerializer(episodes, many=True).data

@@ -2,3 +2,30 @@ media/videos/*
 !media/videos/.gitkeep
 media/thumbnails/*
 !media/thumbnails/.gitkeep
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Django
+*.sqlite3
+*.log
+staticfiles/
+
+# Environment variables
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/

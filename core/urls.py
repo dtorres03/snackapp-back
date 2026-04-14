@@ -18,6 +18,8 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from users.views import UserViewSet
+from videos.views import VideoViewSet, CategoryViewSet
+
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -26,6 +28,8 @@ from rest_framework_simplejwt.views import (
 # El router crea las URLs del CRUD automáticamente
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
+router.register(r'videos', VideoViewSet, basename='video')
+router.register(r'categories', CategoryViewSet, basename='category')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

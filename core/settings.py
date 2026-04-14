@@ -10,11 +10,19 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 from datetime import timedelta
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Esta es la ruta absoluta en tu disco duro (donde se guardan los archivos)
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Esta es la URL pública para acceder a ellos desde el navegador/Postman
+MEDIA_URL = '/media/'
 
 
 # Quick-start development settings - unsuitable for production
@@ -128,7 +136,9 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated', # Nadie entra si no tiene Token
-    )
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 5  # Aquí defines el límite de 5 videos por página
 }
 
 # 2. Configurar el tiempo de vida del Token

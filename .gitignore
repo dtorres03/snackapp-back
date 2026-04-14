@@ -1,0 +1,4 @@
+media/videos/*
+!media/videos/.gitkeep
+media/thumbnails/*
+!media/thumbnails/.gitkeep

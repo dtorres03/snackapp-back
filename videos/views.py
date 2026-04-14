@@ -1,5 +1,6 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
 from .models import Video, Category, Serie
 from .serializers import VideoSerializer, CategorySerializer, SeriesSerializer
 from .pagination import StandardResultsSetPagination
@@ -23,6 +24,11 @@ class VideoViewSet(viewsets.ModelViewSet):
     def list(self, request):
         queryset = self.get_queryset()
 
+        # Rechazar ?page= (string vacío) antes de llegar al paginador
+        page_param = request.query_params.get('page')
+        if page_param is not None and page_param.strip() == '':
+            raise NotFound(detail="Invalid page.")
+
         # Filtrar por serie si se pasa el param ?serie=<id>
         serie_id = request.query_params.get('serie')
         if serie_id is not None:
@@ -30,7 +36,17 @@ class VideoViewSet(viewsets.ModelViewSet):
 
         # Paginar el queryset (5 videos por página)
         paginator = StandardResultsSetPagination()
-        page = paginator.paginate_queryset(queryset, request)
+        try:
+            page = paginator.paginate_queryset(queryset, request)
+        except NotFound:
+            # DRF convierte InvalidPage en NotFound internamente.
+            # Si el param ?page es un entero fuera de rango → array vacío
+            # Si no es un entero (letras, símbolos) → re-lanzar el error
+            try:
+                int(page_param)
+                return Response([])
+            except (ValueError, TypeError):
+                raise NotFound(detail="Invalid page.")
 
         # Devolver directamente el array, sin el envelope count/next/previous/results
         items = page if page is not None else queryset
@@ -54,9 +70,26 @@ class SeriesViewSet(viewsets.ViewSet):
     def list(self, request):
         queryset = Serie.objects.all().order_by('id')
 
+        # Rechazar ?page= (string vacío) antes de llegar al paginador
+        page_param = request.query_params.get('page')
+        if page_param is not None and page_param.strip() == '':
+            raise NotFound(detail="Invalid page.")
+
         # Paginar el queryset (5 series por página)
         paginator = self.pagination_class()
-        page = paginator.paginate_queryset(queryset, request)
+        try:
+            page = paginator.paginate_queryset(queryset, request)
+        except NotFound:
+            # DRF convierte InvalidPage en NotFound internamente.
+            # Si el param ?page es un entero fuera de rango → array vacío
+            # Si no es un entero (letras, símbolos) → re-lanzar el error
+            try:
+                int(page_param)
+                # Es un entero válido pero fuera de rango: devolver array vacío
+                return Response([])
+            except (ValueError, TypeError):
+                # No es un entero (letras, símbolos): error estándar
+                raise NotFound(detail="Invalid page.")
 
         # Devolver directamente el array, sin el envelope count/next/previous/results
         items = page if page is not None else queryset

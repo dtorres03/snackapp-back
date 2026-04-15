@@ -80,14 +80,18 @@ class SeriesVideoSerializer(serializers.ModelSerializer):
 
 class SeriesSerializer(serializers.ModelSerializer):
     """Serializer para el listado de Series con paginación.
-    Incluye 'id', 'title', 'category' (ID) y los primeros 5 videos de cada serie.
+    Incluye 'id', 'title', 'category' (ID), 'poster' y los primeros 5 videos de cada serie.
     """
     category = serializers.PrimaryKeyRelatedField(read_only=True)
+    poster = serializers.SerializerMethodField()
     videos = serializers.SerializerMethodField()
 
     class Meta:
         model = Serie
-        fields = ['id', 'title', 'category', 'videos']
+        fields = ['id', 'title', 'category', 'poster', 'videos']
+
+    def get_poster(self, obj):
+        return obj.poster.name if obj.poster else None
 
     def get_videos(self, obj):
         # Solo los primeros 5 episodios respetando el ordering del modelo (season, episode)

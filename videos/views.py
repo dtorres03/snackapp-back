@@ -1,9 +1,12 @@
-from rest_framework import viewsets, permissions, status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, permissions, status, filters
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from .models import Video, Category, Serie
 from .serializers import VideoSerializer, CategorySerializer, SeriesSerializer
 from .pagination import StandardResultsSetPagination
+from .filters import VideoFilter
+from django.db.models import Q
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -13,8 +16,36 @@ class CategoryViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
 
 class VideoViewSet(viewsets.ModelViewSet):
-    queryset = Video.objects.all()
     serializer_class = VideoSerializer
+    
+    # Configuramos los backends de filtro específicamente para esta vista
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    
+    
+    # Campos por los que se puede buscar con texto (Buscador)
+    search_fields = ['^title', 'description', 'category_name', 'serie_name']
+    
+    def get_queryset(self):
+        queryset = Video.objects.all()
+        category_name = self.request.query_params.get('category')
+        search_query = self.request.query_params.get('search')
+        season = self.request.query_params.get('season')
+        
+        if category_name:
+            # Esto obliga a Django a filtrar, sí o sí
+            queryset = queryset.filter(category__name__iexact=category_name)
+            
+        if season:
+            queryset = queryset.filter(season_number=season)
+        
+        if search_query:
+            # Buscamos en título del video O nombre de la serie
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) | 
+                Q(serie__title__icontains=search_query)
+            )
+            
+        return queryset
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:

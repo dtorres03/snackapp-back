@@ -1,7 +1,9 @@
+import uuid
 from django.db import models
 from django.contrib.auth import get_user_model # Para referenciar a tu CustomUser
 
 class Category(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     
     class Meta:
@@ -12,6 +14,7 @@ class Category(models.Model):
         return self.name
 
 class Serie(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
     description = models.TextField()
     poster = models.ImageField(upload_to='posters/', null=True, blank=True)
@@ -22,6 +25,7 @@ class Serie(models.Model):
         return self.title
     
 class Video(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='videos')
     serie = models.ForeignKey(Serie, on_delete=models.CASCADE, null=True, blank=True, related_name='episodes')
     

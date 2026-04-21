@@ -1,18 +1,36 @@
 """
-URL configuration for core project.
+Módulo de Enrutamiento Central - SnackApp API.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+Este archivo centraliza la definición de rutas para el backend de SnackApp. 
+Utiliza una arquitectura híbrida que combina rutas manuales para servicios 
+de infraestructura (Admin, Auth, Docs) y un `DefaultRouter` para la exposición 
+automática de los ViewSets de la lógica de negocio.
+
+Arquitectura de Rutas:
+    1. Servicios de Infraestructura:
+        - /admin/ : Punto de entrada al panel de administración de Django.
+        - /api/login/ : Endpoint de autenticación (SimpleJWT).
+        - /api/token/refresh/ : Renovación de tokens de acceso expirados.
+        
+    2. Documentación OpenAPI 3.0:
+        - /api/schema/ : Generación dinámica del esquema técnico (YAML/JSON).
+        - /api/docs/ : Interfaz interactiva de Swagger UI para pruebas.
+        - /api/redoc/ : Documentación técnica estática vía Redoc.
+
+    3. Endpoints de Negocio (Auto-generados vía Router):
+        - /api/users/ : Gestión de perfiles de usuario.
+        - /api/videos/ : Catálogo de contenido multimedia.
+        - /api/categories/ : Clasificación de contenido.
+        - /api/series/ : Agrupación de episodios y temporadas.
+        - /api/favorites/ : Gestión de preferencias del usuario.
+
+Configuración de Archivos Estáticos:
+    En modo DEBUG, el servidor expone la ruta `media/` para el servicio directo 
+    de archivos de video y miniaturas almacenados localmente.
+
+Seguridad:
+    Implementa validación de tokens Bearer JWT y filtrado de integridad 
+    basado en UUIDs como claves primarias en todos los recursos.
 """
 from django.contrib import admin
 from django.urls import path, include
@@ -22,7 +40,7 @@ from rest_framework.routers import DefaultRouter
 from users.views import UserViewSet
 from videos.views import VideoViewSet, CategoryViewSet, SeriesViewSet
 from interactions.views import FavoriteViewSet
-
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -41,6 +59,16 @@ urlpatterns = [
     path('api/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/', include(router.urls)),
+    
+    # Genera el archivo del esquema (YAML/JSON)
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    
+    # Interfaz de Swagger (La más popular para probar endpoints)
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    
+    # Interfaz de Redoc (Una alternativa más limpia y enfocada a lectura)
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
 ]
 
 # Esto permite que media/videos/video.mp4 sea accesible vía HTTP

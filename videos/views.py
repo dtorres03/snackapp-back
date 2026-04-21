@@ -1,3 +1,11 @@
+"""
+Vistas de Catálogo y Multimedia - SnackApp.
+
+Este módulo gestiona la exposición de categorías, series y videos. Implementa 
+lógicas de búsqueda compleja, filtrado por temporadas y un sistema de 
+paginación simplificado que entrega colecciones directas al cliente.
+"""
+
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, permissions, status, filters
 from rest_framework.response import Response
@@ -5,124 +13,137 @@ from rest_framework.exceptions import NotFound
 from .models import Video, Category, Serie
 from .serializers import VideoSerializer, CategorySerializer, SeriesSerializer
 from .pagination import StandardResultsSetPagination
-from .filters import VideoFilter
 from django.db.models import Q
 
 class CategoryViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para la gestión de categorías de contenido.
+
+    Permite a los administradores gestionar las etiquetas temáticas, mientras 
+    que el acceso de lectura es público para permitir la navegación del catálogo.
+    """
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    pagination_class = StandardResultsSetPagination # Sobrescribe la global solo para este endpoint
-    # Para que cualquiera pueda ver las categorías al navegar
+    pagination_class = StandardResultsSetPagination
     permission_classes = [permissions.AllowAny]
 
 class VideoViewSet(viewsets.ModelViewSet):
+    """
+    Controlador principal para el catálogo de videos y episodios.
+
+    Implementa búsqueda avanzada y filtrado dinámico. A diferencia de las vistas 
+    estándar, el método `list` ha sido sobrescrito para retornar una lista 
+    plana de objetos, optimizando el consumo para componentes de scroll infinito.
+
+    Búsqueda y Filtrado:
+        - search: Busca coincidencias en títulos, descripciones y nombres de series.
+        - category: Filtro exacto por nombre de categoría (case-insensitive).
+        - season: Filtro por número de temporada.
+        - serie: Filtro por ID de serie para obtener episodios específicos.
+    """
     serializer_class = VideoSerializer
-    
-    # Configuramos los backends de filtro específicamente para esta vista
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    
-    
-    # Campos por los que se puede buscar con texto (Buscador)
     search_fields = ['^title', 'description', 'category_name', 'serie_name']
     
     def get_queryset(self):
+        """
+        Construye el queryset aplicando filtros complejos mediante Q objects.
+        
+        Asegura que las búsquedas de texto abarquen tanto el contenido del 
+        video como los metadatos de la serie vinculada.
+        """
         queryset = Video.objects.all()
         category_name = self.request.query_params.get('category')
         search_query = self.request.query_params.get('search')
         season = self.request.query_params.get('season')
         
         if category_name:
-            # Esto obliga a Django a filtrar, sí o sí
             queryset = queryset.filter(category__name__iexact=category_name)
-            
         if season:
             queryset = queryset.filter(season_number=season)
-        
         if search_query:
-            # Buscamos en título del video O nombre de la serie
             queryset = queryset.filter(
                 Q(title__icontains=search_query) | 
                 Q(serie__title__icontains=search_query)
             )
-            
         return queryset
 
     def get_permissions(self):
+        """
+        Define políticas de acceso granulares.
+        - Lectura: Público (AllowAny).
+        - Escritura: Solo usuarios autenticados.
+        """
         if self.action in ['list', 'retrieve']:
-            return [permissions.AllowAny()] # Cualquiera puede ver videos 
-        return [permissions.IsAuthenticated()] # Solo logueados suben/editan/borran
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
 
     def list(self, request):
+        """
+        Retorna la lista de videos paginada en formato de array simple.
+        
+        Gestiona excepciones de paginación para retornar listas vacías en 
+        lugar de errores 404 cuando el índice de página excede el contenido, 
+        mejorando la resiliencia del frontend.
+        """
         queryset = self.get_queryset()
-
-        # Rechazar ?page= (string vacío) antes de llegar al paginador
         page_param = request.query_params.get('page')
+        
         if page_param is not None and page_param.strip() == '':
             raise NotFound(detail="Invalid page.")
 
-        # Filtrar por serie si se pasa el param ?serie=<id>
         serie_id = request.query_params.get('serie')
         if serie_id is not None:
             queryset = queryset.filter(serie__id=serie_id)
 
-        # Paginar el queryset (5 videos por página)
         paginator = StandardResultsSetPagination()
         try:
             page = paginator.paginate_queryset(queryset, request)
         except NotFound:
-            # DRF convierte InvalidPage en NotFound internamente.
-            # Si el param ?page es un entero fuera de rango → array vacío
-            # Si no es un entero (letras, símbolos) → re-lanzar el error
             try:
                 int(page_param)
                 return Response([])
             except (ValueError, TypeError):
                 raise NotFound(detail="Invalid page.")
 
-        # Devolver directamente el array, sin el envelope count/next/previous/results
         items = page if page is not None else queryset
         serializer = self.get_serializer(items, many=True)
         return Response(serializer.data)
 
     def perform_create(self, serializer):
-        # Guarda el video y se lo asigna al asuario que hace la petición
-        #print("Datos de texto:", self.request.data)
-        #print("Archivos recibidos:", self.request.FILES)
+        """Asigna la autoría del video al usuario autenticado durante el guardado."""
         serializer.save(user=self.request.user)
 
 
 class SeriesViewSet(viewsets.ViewSet):
-    """Endpoint de Series con paginación (5 series/página).
-    Cada serie incluye id, title, category y los primeros 5 videos.
+    """
+    Endpoint especializado para la navegación por Series.
+
+    Proporciona una vista de alto nivel que incluye metadatos de la serie 
+    y una previsualización de sus episodios iniciales. Utiliza el mismo 
+    sistema de respuesta simplificada (array plano) que VideoViewSet.
     """
     permission_classes = [permissions.AllowAny]
     pagination_class = StandardResultsSetPagination
 
     def list(self, request):
+        """Lista todas las series con soporte para paginación manual."""
         queryset = Serie.objects.all().order_by('id')
-
-        # Rechazar ?page= (string vacío) antes de llegar al paginador
         page_param = request.query_params.get('page')
+
         if page_param is not None and page_param.strip() == '':
             raise NotFound(detail="Invalid page.")
 
-        # Paginar el queryset (5 series por página)
         paginator = self.pagination_class()
         try:
             page = paginator.paginate_queryset(queryset, request)
         except NotFound:
-            # DRF convierte InvalidPage en NotFound internamente.
-            # Si el param ?page es un entero fuera de rango → array vacío
-            # Si no es un entero (letras, símbolos) → re-lanzar el error
             try:
                 int(page_param)
-                # Es un entero válido pero fuera de rango: devolver array vacío
                 return Response([])
             except (ValueError, TypeError):
-                # No es un entero (letras, símbolos): error estándar
                 raise NotFound(detail="Invalid page.")
 
-        # Devolver directamente el array, sin el envelope count/next/previous/results
         items = page if page is not None else queryset
         serializer = SeriesSerializer(items, many=True)
         return Response(serializer.data)

@@ -18,7 +18,7 @@ class Category(models.Model):
         id (UUID): Identificador único universal.
         name (str): Nombre de la categoría.
     """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     name = models.CharField(max_length=100)
     
     class Meta:
@@ -40,7 +40,7 @@ class Serie(models.Model):
         category (ForeignKey): Referencia a la categoría principal.
         created_at (DateTimeField): Fecha de registro de la serie.
     """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     title = models.CharField(max_length=200)
     description = models.TextField()
     poster = models.ImageField(upload_to='posters/', null=True, blank=True)
@@ -69,7 +69,7 @@ class Video(models.Model):
         - unique_together: Impide la duplicidad de números de episodio dentro de 
           una misma temporada para una serie específica.
     """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='videos')
     serie = models.ForeignKey(Serie, on_delete=models.CASCADE, null=True, blank=True, related_name='episodes')
     

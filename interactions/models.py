@@ -23,7 +23,7 @@ class Favorite(models.Model):
         - Un usuario no puede marcar el mismo video como favorito más de una vez 
           (Definido en Meta.unique_together).
     """
-
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
     # Relación con el modelo de usuario personalizado
     user = models.ForeignKey(

@@ -23,7 +23,7 @@ class CustomUser(AbstractUser):
         username (CharField): Nombre de visualización único.
         created_at (DateTimeField): Fecha de registro en el sistema.
     """
-
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)

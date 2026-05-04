@@ -71,6 +71,13 @@ urlpatterns = [
 
 ]
 
-# Esto permite que media/videos/video.mp4 sea accesible vía HTTP
+from django.urls import re_path
+from core.media_serve import ranged_file_response
+
+# Esto permite que media/videos/video.mp4 sea accesible vía HTTP con soporte para iOS
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Removemos el slash inicial de MEDIA_URL si existe para la regex
+    media_url = settings.MEDIA_URL.lstrip('/')
+    urlpatterns += [
+        re_path(rf'^{media_url}(?P<path>.*)$', ranged_file_response, {'document_root': settings.MEDIA_ROOT}),
+    ]

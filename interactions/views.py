@@ -7,6 +7,8 @@ guardados.
 """
 
 from rest_framework import viewsets, permissions
+from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
 from .models import Favorite
 from .serializers import FavoriteSerializer
 
@@ -36,6 +38,33 @@ class FavoriteViewSet(viewsets.ModelViewSet):
         incluso si conoce el UUID del registro.
         """
         return Favorite.objects.filter(user=self.request.user)
+
+    def list(self, request, *args, **kwargs):
+        """
+        Retorna la lista de favoritos paginada pero estructurada como un 
+        arreglo simple para facilitar su manejo en el frontend.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        page_param = request.query_params.get('page')
+        
+        if page_param is not None and page_param.strip() == '':
+            raise NotFound(detail="Invalid page.")
+        
+        try:
+            page = self.paginate_queryset(queryset)
+        except NotFound:
+            try:
+                int(page_param)
+                return Response([])
+            except (ValueError, TypeError):
+                raise NotFound(detail="Invalid page.")
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return Response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         """

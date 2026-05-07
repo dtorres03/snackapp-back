@@ -10,6 +10,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from .models import CustomUser
 from .serializers import UserSerializer
+from rest_framework.decorators import action
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -156,3 +157,12 @@ class UserViewSet(viewsets.ModelViewSet):
             # Log de error para depuración en entorno de desarrollo
             print(f"--- ERROR CRÍTICO: {e} ---")
             raise
+        
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def me(self, request):
+        """
+        Retorna la información del usuario autenticado.
+        URL: GET /api/users/me/
+        """
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)

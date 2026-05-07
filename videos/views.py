@@ -27,6 +27,34 @@ class CategoryViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     permission_classes = [permissions.AllowAny]
 
+    def list(self, request, *args, **kwargs):
+        """
+        Retorna la lista de categorías paginada pero estructurada como un 
+        arreglo simple para facilitar su manejo en el frontend.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        page_param = request.query_params.get('page')
+        
+        if page_param is not None and page_param.strip() == '':
+            raise NotFound(detail="Invalid page.")
+        
+        try:
+            page = self.paginate_queryset(queryset)
+        except NotFound:
+            try:
+                if page_param is not None:
+                    int(page_param)
+                return Response([])
+            except (ValueError, TypeError):
+                raise NotFound(detail="Invalid page.")
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return Response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
 class VideoViewSet(viewsets.ModelViewSet):
     """
     Controlador principal para el catálogo de videos y episodios.

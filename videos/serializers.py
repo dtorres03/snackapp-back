@@ -83,22 +83,41 @@ class VideoSerializer(serializers.ModelSerializer):
 
 class SeriesVideoSerializer(serializers.ModelSerializer):
     """
-    Versión ligera de Video para visualización dentro de colecciones.
+    Versión actualizada de Video para visualización dentro de colecciones.
     
-    Optimiza la carga al excluir relaciones pesadas y centrarse en la 
-    información esencial del episodio para listas de reproducción.
+    Ahora incluye la información completa del episodio para mantener la consistencia
+    con VideoSerializer en el frontend.
     """
+    serie_id = serializers.PrimaryKeyRelatedField(
+        source='serie', 
+        queryset=Serie.objects.all(),
+        required=False
+    )
+    serie_name = serializers.ReadOnlyField(source='serie.title')
+    username = serializers.ReadOnlyField(source='user.username')
+    category_id = serializers.PrimaryKeyRelatedField(
+        source='category', 
+        queryset=Category.objects.all()
+    )
+    category_name = serializers.ReadOnlyField(source='category.name')
+    video_file = serializers.FileField(write_only=True)
+    thumbnail = serializers.ImageField(write_only=True)
     video_path = serializers.SerializerMethodField()
     thumbnail_path = serializers.SerializerMethodField()
 
     class Meta:
         model = Video
         fields = [
-            'id', 'title', 'description',
+            'id', 'title', 'description', 
+            'serie_id', 'serie_name',
             'season_number', 'episode_number',
-            'video_path', 'thumbnail_path',
-            'created_at',
+            'video_file', 'thumbnail',
+            'video_path', 'thumbnail_path', 
+            'category_id', 'category_name',
+            'user_id' ,'username',
+            'created_at'
         ]
+        extra_kwargs = {'user': {'read_only': True}}
 
     def get_video_path(self, obj):
         return obj.video_file.name if obj.video_file else None

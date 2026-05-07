@@ -36,13 +36,12 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = CustomUser
-        fields = ['id', 'username', 'email', 'password', 'created_at']
+        fields = ['id', 'username', 'email', 'password', 'tokens', 'created_at']
         extra_kwargs = {
             'password': {'write_only': True, 'required': True},
+            'tokens': {'read_only': True},
             'created_at': {'read_only': True},
         }
-
-    # --- VALIDACIONES DE CAMPO (Para el Front) ---
 
     def validate_email(self, value):
         """

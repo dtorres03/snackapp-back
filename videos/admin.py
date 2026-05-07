@@ -27,4 +27,4 @@ class VideoAdmin(admin.ModelAdmin):
     # Filtros laterales para encontrar videos rápido
     list_filter = ('serie', 'category', 'user')
     # Buscador por título y descripción
-    search_fields = ('title', 'description')
+    search_fields = ('title', 'serie', 'description')

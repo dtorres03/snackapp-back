@@ -40,6 +40,8 @@ class VideoSerializer(serializers.ModelSerializer):
     Atributos:
         video_path (str): Ruta relativa del archivo de video en el storage.
         thumbnail_path (str): Ruta relativa de la miniatura en el storage.
+        cost (int): Precio en tokens definido en el modelo.
+        is_unlocked (bool): Indica si el usuario que realiza la petición tiene acceso al contenido.
     """
     serie_id = serializers.PrimaryKeyRelatedField(
         source='serie', 
@@ -57,11 +59,14 @@ class VideoSerializer(serializers.ModelSerializer):
     thumbnail = serializers.ImageField(write_only=True)
     video_path = serializers.SerializerMethodField()
     thumbnail_path = serializers.SerializerMethodField()
+    
+    is_unlocked = serializers.SerializerMethodField()
 
     class Meta:
         model = Video
         fields = [
-            'id', 'title', 'description', 
+            'id', 'title', 'description',
+            'cost', 'is_unlocked',
             'serie_id', 'serie_name',
             'season_number', 'episode_number',
             'video_file', 'thumbnail',
@@ -71,6 +76,20 @@ class VideoSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         extra_kwargs = {'user': {'read_only': True}}
+        
+    def get_is_unlocked(self, obj):
+        """
+        Determina si el usuario actual ha desbloqueado este video.
+        Si el usuario es el autor del video (uploader), el acceso es total.
+        """
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
+            return False
+            
+        if obj.user == request.user:
+            return True
+            
+        return obj.users_with_access.filter(id=request.user.id).exists()
         
     def get_video_path(self, obj):
         """Extrae la ruta del archivo de video si existe."""
@@ -104,11 +123,14 @@ class SeriesVideoSerializer(serializers.ModelSerializer):
     thumbnail = serializers.ImageField(write_only=True)
     video_path = serializers.SerializerMethodField()
     thumbnail_path = serializers.SerializerMethodField()
+    
+    is_unlocked = serializers.SerializerMethodField()
 
     class Meta:
         model = Video
         fields = [
             'id', 'title', 'description', 
+            'cost', 'is_unlocked',
             'serie_id', 'serie_name',
             'season_number', 'episode_number',
             'video_file', 'thumbnail',
@@ -118,6 +140,15 @@ class SeriesVideoSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         extra_kwargs = {'user': {'read_only': True}}
+        
+    def get_is_unlocked(self, obj):
+        """Misma lógica: Autor o Comprador tienen acceso."""
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
+            return False
+        if obj.user == request.user:
+            return True
+        return obj.users_with_access.filter(id=request.user.id).exists()
 
     def get_video_path(self, obj):
         return obj.video_file.name if obj.video_file else None

@@ -22,11 +22,13 @@ class CustomUser(AbstractUser):
         email (EmailField): Correo electrónico único para autenticación.
         username (CharField): Nombre de visualización único.
         created_at (DateTimeField): Fecha de registro en el sistema.
+        tokens (PositiveIntegerField): Cantidad de tokens asignados al usuario.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    tokens = models.PositiveIntegerField(default=100)
 
     # Configuración de credenciales
     USERNAME_FIELD = 'email'

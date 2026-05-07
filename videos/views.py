@@ -14,6 +14,9 @@ from .models import Video, Category, Serie
 from .serializers import VideoSerializer, CategorySerializer, SeriesSerializer
 from .pagination import StandardResultsSetPagination
 from django.db.models import Q
+from django.db import transaction
+from rest_framework.decorators import action
+from django.contrib.auth import get_user_model
 
 class CategoryViewSet(viewsets.ModelViewSet):
     """
@@ -105,6 +108,78 @@ class VideoViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
+    
+    @action(detail=True, methods=['post'], url_path='unlock', permission_classes=[permissions.IsAuthenticated])
+    def unlock(self, request, pk=None):
+        """
+        Gestiona el canje de tokens por acceso al contenido.
+        
+        Aplica una transacción atómica para garantizar que el descuento de tokens
+        y la concesión de acceso ocurran como una única operación indivisible,
+        previniendo errores de saldo negativo por clicks duplicados en la App.
+        """
+        video = self.get_object()
+        user = request.user
+        
+        if video.user == user:
+            return Response(
+            {"detail": "Eres el autor de este video, ya tienes acceso total sin costo."},
+            status=status.HTTP_200_OK
+        )
+
+        if video.users_with_access.filter(id=user.id).exists():
+            return Response(
+                {"detail": "Ya has desbloqueado este video anteriormente."},
+                status=status.HTTP_200_OK
+            )
+
+        try:
+            with transaction.atomic():
+                user_record = get_user_model().objects.select_for_update().get(id=user.id)
+
+                if user_record.tokens < video.cost:
+                    return Response(
+                        {"detail": "Saldo de tokens insuficiente.", "required": video.cost, "current": user_record.tokens},
+                        status=status.HTTP_402_PAYMENT_REQUIRED
+                    )
+
+                user_record.tokens -= video.cost
+                user_record.save()
+                video.users_with_access.add(user_record)
+
+                return Response({
+                    "detail": f"Video '{video.title}' desbloqueado correctamente.",
+                    "remaining_tokens": user_record.tokens
+                }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {"detail": "Ocurrió un error inesperado al procesar el canje."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'], url_path='my-purchases')
+    def purchased_videos(self, request):
+        """
+        Retorna la lista de videos que el usuario actual ha comprado.
+        URL: GET /api/videos/my-purchases/
+        """
+        # Filtramos los videos donde el usuario está en la lista de acceso
+        # pero EXCLUIMOS los videos que él mismo subió (para ver solo compras)
+        queryset = Video.objects.filter(
+            users_with_access=request.user
+        ).exclude(user=request.user)
+        
+        # Reutilizamos tu lógica de paginación simplificada
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return Response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def list(self, request):
         """

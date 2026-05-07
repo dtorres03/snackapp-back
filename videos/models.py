@@ -64,6 +64,9 @@ class Video(models.Model):
         episode_number (int): Posición del video dentro de la temporada.
         video_file (File): Archivo de video almacenado en el servidor.
         thumbnail (Image): Imagen de previsualización del video.
+        cost (int): Cantidad de tokens requerida para desbloquear el video.
+        users_with_access (ManyToManyField): Relación que registra qué usuarios 
+            han canjeado sus tokens por este contenido.
 
     Restricciones de Integridad:
         - unique_together: Impide la duplicidad de números de episodio dentro de 
@@ -83,6 +86,11 @@ class Video(models.Model):
     video_file = models.FileField(upload_to='videos/', null=True, blank=True)
     thumbnail = models.ImageField(upload_to='thumbnails/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    
+    cost = models.PositiveIntegerField(default=10)
+    users_with_access = models.ManyToManyField(get_user_model(),blank=True,related_name='unlocked_videos')
+    
 
     class Meta:
         """Configuración de ordenamiento y restricciones de base de datos."""

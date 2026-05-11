@@ -248,5 +248,5 @@ class SeriesViewSet(viewsets.ViewSet):
                 raise NotFound(detail="Invalid page.")
 
         items = page if page is not None else queryset
-        serializer = SeriesSerializer(items, many=True)
+        serializer = SeriesSerializer(items, many=True, context={'request': request})
         return Response(serializer.data)

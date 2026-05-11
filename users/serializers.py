@@ -1,26 +1,56 @@
+"""
+Serializadores para la aplicación de Usuarios.
+
+Este módulo define la lógica de transformación, limpieza y validación rigurosa 
+para el modelo CustomUser. Implementa reglas de seguridad para contraseñas, 
+formateo de identificadores y gestión de unicidad de correos electrónicos.
+"""
+
 from rest_framework import serializers
 from .models import CustomUser
 from rest_framework.exceptions import ValidationError
 import re
 
 class UserSerializer(serializers.ModelSerializer):
+    """
+    Serializador principal para la gestión de usuarios (Registro y Perfil).
+
+    Este serializador maneja la creación segura de usuarios mediante `create_user` 
+    y actualizaciones parciales de perfil, incluyendo el hashing de contraseñas.
+
+    Atributos:
+        id (UUID): Identificador único de solo lectura.
+        password (str): Campo de solo escritura con validaciones de complejidad.
+        email (str): Validado para unicidad (case-insensitive).
+        username (str): Validado con Regex para alfanuméricos y guiones bajos.
+
+    Validaciones de Seguridad:
+        - Username: 5-10 caracteres, alfanumérico.
+        - Password: Mínimo 8 caracteres, requiere número, mayúscula y carácter especial.
+        - Email: Conversión automática a minúsculas y verificación de duplicados.
+    """
+    
     username = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, required=True, allow_blank=True)
     
     class Meta:
         model = CustomUser
-        fields = ['id', 'username', 'email', 'password', 'created_at']
+        fields = ['id', 'username', 'email', 'password', 'tokens', 'created_at']
         extra_kwargs = {
             'password': {'write_only': True, 'required': True},
+            'tokens': {'read_only': True},
             'created_at': {'read_only': True},
-            #'email': {'required': True}
         }
 
-    # --- VALIDACIONES DE CAMPO (Para el Front) ---
-
     def validate_email(self, value):
-        """Verifica si el email ya existe antes de intentar guardarlo."""
+        """
+        Limpia y valida el correo electrónico.
+        
+        Asegura que el email se guarde en minúsculas y verifica que no esté 
+        registrado por otro usuario, permitiendo la edición del propio perfil.
+        """
+        
         # Convertimos a minúsculas para evitar duplicados por capitalización
         email = value.lower()
         if self.instance: # Si estamos editando (update)
@@ -32,6 +62,13 @@ class UserSerializer(serializers.ModelSerializer):
         return email
 
     def validate_username(self, value):
+        """
+        Valida el formato y disponibilidad del nombre de usuario.
+        
+        Aplica restricciones de longitud (5-10) y asegura que solo contenga 
+        caracteres seguros mediante expresiones regulares (Regex).
+        """
+        
         # 1. Eliminar espacios en blanco accidentales a los lados
         username = value.strip() if value else ""
 
@@ -60,6 +97,13 @@ class UserSerializer(serializers.ModelSerializer):
         return username
 
     def validate_password(self, value):
+        """
+        Verifica la fortaleza de la contraseña.
+        
+        Exige una combinación de longitud mínima, números, mayúsculas 
+        y caracteres especiales para cumplir con estándares de seguridad modernos.
+        """
+        
         # 1. Validar si está vacío
         if not value or value.strip() == "":
             raise ValidationError("La contraseña es obligatoria y no puede estar vacía.")
@@ -82,12 +126,19 @@ class UserSerializer(serializers.ModelSerializer):
 
         return value
 
-    # --- LÓGICA DE GUARDADO ---
+    # --- LÓGICA DE PERSISTENCIA ---
 
     def create(self, validated_data):
+        """Crea un usuario utilizando el método especializado del Manager para hashing."""
         return CustomUser.objects.create_user(**validated_data)
     
     def update(self, instance, validated_data):
+        """
+        Actualiza la instancia del usuario.
+        
+        Maneja de forma segura el cambio de contraseña utilizando `set_password` 
+        si se proporciona una nueva en la petición.
+        """
         password = validated_data.pop('password', None)
         
         # Actualizamos campos normales

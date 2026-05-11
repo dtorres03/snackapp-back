@@ -6,7 +6,7 @@ cada usuario solo pueda interactuar con su propio catálogo personal de videos
 guardados.
 """
 
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from .models import Favorite
@@ -28,6 +28,43 @@ class FavoriteViewSet(viewsets.ModelViewSet):
     """
     serializer_class = FavoriteSerializer
     permission_classes = [permissions.IsAuthenticated]
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Sobrescribimos el método 'create' para que funcione como un Toggle.
+        """
+        video_id = request.data.get('video')
+        
+        if not video_id:
+            return Response(
+                {"detail": "El campo 'video' es requerido."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Buscamos si el favorito ya existe para el usuario actual
+        favorito_existente = Favorite.objects.filter(
+            user=request.user, 
+            video_id=video_id
+        ).first()
+
+        if favorito_existente:
+            # Si ya existe, lo eliminamos (Toggle OFF)
+            favorito_existente.delete()
+            return Response(
+                {"message": "Eliminado de favoritos", "is_favorite": False},
+                status=status.HTTP_200_OK
+            )
+        
+        # Si no existe, procedemos a crearlo (Toggle ON)
+        # Reutilizamos la lógica estándar de DRF
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        return Response(
+            {"message": "Agregado a favoritos", "is_favorite": True, "data": serializer.data},
+            status=status.HTTP_201_CREATED
+        )
 
     def get_queryset(self):
         """

@@ -8,6 +8,7 @@ y optimiza la carga de episodios mediante serialización anidada limitada.
 
 from rest_framework import serializers
 from .models import Video, Category, Serie
+from interactions.models import Favorite
 
 class CategorySerializer(serializers.ModelSerializer):
     """
@@ -61,12 +62,13 @@ class VideoSerializer(serializers.ModelSerializer):
     thumbnail_path = serializers.SerializerMethodField()
     
     is_unlocked = serializers.SerializerMethodField()
-
+    is_favorite = serializers.SerializerMethodField()
+    
     class Meta:
         model = Video
         fields = [
             'id', 'title', 'description',
-            'cost', 'is_unlocked',
+            'cost', 'is_unlocked', 'is_favorite',
             'serie_id', 'serie_name',
             'season_number', 'episode_number',
             'video_file', 'thumbnail',
@@ -98,7 +100,14 @@ class VideoSerializer(serializers.ModelSerializer):
     def get_thumbnail_path(self, obj):
         """Extrae la ruta de la miniatura si existe."""
         return obj.thumbnail.name if obj.thumbnail else None
-
+    
+    def get_is_favorite(self, obj):
+        user = self.context.get('request').user
+        if user and user.is_authenticated:
+            # Aquí es donde ocurre la magia: si eliminaste el registro, 
+            # esto devolverá False y Postman lo mostrará actualizado.
+            return Favorite.objects.filter(user=user, video=obj).exists()
+        return False
 
 class SeriesVideoSerializer(serializers.ModelSerializer):
     """
@@ -125,12 +134,13 @@ class SeriesVideoSerializer(serializers.ModelSerializer):
     thumbnail_path = serializers.SerializerMethodField()
     
     is_unlocked = serializers.SerializerMethodField()
+    is_favorite = serializers.SerializerMethodField()
 
     class Meta:
         model = Video
         fields = [
             'id', 'title', 'description', 
-            'cost', 'is_unlocked',
+            'cost', 'is_unlocked', 'is_favorite',
             'serie_id', 'serie_name',
             'season_number', 'episode_number',
             'video_file', 'thumbnail',
@@ -155,6 +165,14 @@ class SeriesVideoSerializer(serializers.ModelSerializer):
 
     def get_thumbnail_path(self, obj):
         return obj.thumbnail.name if obj.thumbnail else None
+    
+    def get_is_favorite(self, obj):
+        user = self.context.get('request').user
+        if user and user.is_authenticated:
+            # Aquí es donde ocurre la magia: si eliminaste el registro, 
+            # esto devolverá False y Postman lo mostrará actualizado.
+            return Favorite.objects.filter(user=user, video=obj).exists()
+        return False
 
 
 class SeriesSerializer(serializers.ModelSerializer):

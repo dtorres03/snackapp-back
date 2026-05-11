@@ -201,4 +201,4 @@ class SeriesSerializer(serializers.ModelSerializer):
         en el modelo (Temporada/Episodio).
         """
         episodes = obj.episodes.all()[:5]
-        return SeriesVideoSerializer(episodes, many=True).data
+        return SeriesVideoSerializer(episodes, many=True, context=self.context).data

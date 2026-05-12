@@ -43,16 +43,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Esta es la URL pública para acceder a ellos desde el navegador/Postman
-MEDIA_URL = '/media/'
+MEDIA_URL = 'https://snakapp.co/media/'
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ['93.188.164.97', 'localhost', '127.0.0.1', 'snakapp.co']
 
 
 # Application definition
@@ -71,10 +74,12 @@ INSTALLED_APPS = [
     'drf_spectacular_sidecar',
     'users',
     'videos',
-    'interactions'
+    'interactions',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -82,6 +87,22 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+CORS_ALLOW_ALL_ORIGINS = False
+
+CORS_ALLOWED_ORIGINS = [
+    "https://snakapp.co",
+    "https://www.snakapp.co",
+    "http://localhost:3000",  
+    "http://localhost:8081",  
+]
+
+# Muy importante para que el Login funcione (si usan cookies o tokens)
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://snakapp.co",
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -104,24 +125,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
-
 # Carga las variables del archivo .env
 load_dotenv()
 
 # Sustituye tus configuraciones estáticas
 SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = os.getenv('DEBUG') == 'True'
+DEBUG = os.getenv('DEBUG') == 'False'
 
 DATABASES = {
     'default': {
@@ -168,7 +177,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+
+# La carpeta física donde Django reunirá todos los archivos del proyecto
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # 1. Agregar DRF y SimpleJWT a los frames
 REST_FRAMEWORK = {

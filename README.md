@@ -26,7 +26,7 @@ Si vas a clonar este proyecto por primera vez, sigue estos pasos:
 
 1. **Clonar el repositorio:**
    ```bash
-   git clone https://github.com/tu-usuario/snackapp-back.git
+   git clone https://github.com/dtorres03/snackapp-back.git
    cd snackapp-back
 
 2. **Configura variables de entorno:**

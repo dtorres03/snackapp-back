@@ -7,7 +7,7 @@ anidada de datos de otras aplicaciones.
 """
 
 from rest_framework import serializers
-from .models import Favorite
+from .models import Favorite, Comment
 from videos.serializers import VideoSerializer
 
 class FavoriteSerializer(serializers.ModelSerializer):
@@ -35,3 +35,39 @@ class FavoriteSerializer(serializers.ModelSerializer):
         model = Favorite
         fields = ['id', 'video', 'video_details', 'created_at']
         read_only_fields = ['user']
+        
+class CommentSerializer(serializers.ModelSerializer):
+    user_username = serializers.ReadOnlyField(source='user.username')
+    user_avatar = serializers.SerializerMethodField()
+    likes_count = serializers.ReadOnlyField(source='total_likes')
+    replies_count = serializers.ReadOnlyField(source='total_replies')
+    
+    # Lógica para respuestas anidadas
+    replies = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comment
+        fields = [
+            'id', 'video', 'user', 'user_username', 'user_avatar', 
+            'content', 'parent', 'likes_count', 'replies_count', 
+            'replies', 'created_at'
+        ]
+        read_only_fields = ['user']
+
+    def get_user_avatar(self, obj):
+        request = self.context.get('request')
+        # Buscamos la imagen en el modelo relacionado (ejemplo: Profile)
+        if hasattr(obj.user, 'profile') and obj.user.profile.image:
+            return request.build_absolute_uri(obj.user.profile.image.url)
+        return None
+
+    def get_replies(self, obj):
+        # Solo mostramos respuestas si el comentario es un 'padre' (parent=None)
+        # Esto evita hilos infinitos que rompen el JSON
+        if obj.parent is None:
+            return CommentSerializer(
+                obj.replies.all(), 
+                many=True, 
+                context=self.context
+            ).data
+        return []

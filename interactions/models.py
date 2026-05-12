@@ -8,6 +8,8 @@ entre usuarios y contenido, como el sistema de favoritos y feedback.
 import uuid
 from django.db import models
 from django.conf import settings
+from django.contrib.auth.models import User
+from videos.models import Video
 
 class Favorite(models.Model):
     """
@@ -49,3 +51,52 @@ class Favorite(models.Model):
     def __str__(self):
         """Representación en cadena del objeto Favorito."""
         return f"{self.user.username} - {self.video.title}"
+    
+class Comment(models.Model):
+    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    likes = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='comment_likes', blank=True)
+
+    # Lógica de Respuestas (Threads)
+    # Si parent es null, es un comentario principal.
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
+    
+    # Lógica de Likes
+    # Permite que muchos usuarios den like a muchos comentarios.
+    likes = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='comment_likes', blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.content[:20]}"
+    
+    @property
+    def total_likes(self):
+        """Devuelve el conteo de likes del comentario."""
+        return self.likes.count()
+
+    @property
+    def total_replies(self):
+        """Devuelve el conteo de respuestas a este comentario."""
+        return self.replies.count()
+
+    @property
+    def is_reply(self):
+        """Identifica si es una respuesta o un comentario raíz."""
+        return self.parent is not None
+    
+class VideoLike(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    video = models.ForeignKey('videos.Video', on_delete=models.CASCADE, related_name='video_likes')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # Crucial: Un usuario solo puede dar UN like por video
+        unique_together = ('user', 'video') 
+
+    def __str__(self):
+        return f"{self.user.username} likes {self.video.title}"
+    

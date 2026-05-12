@@ -39,7 +39,7 @@ from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from users.views import UserViewSet
 from videos.views import VideoViewSet, CategoryViewSet, SeriesViewSet
-from interactions.views import FavoriteViewSet
+from interactions.views import FavoriteViewSet, CommentViewSet, VideoInteractionViewSet
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -53,6 +53,8 @@ router.register(r'videos', VideoViewSet, basename='video')
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'series', SeriesViewSet, basename='serie')
 router.register(r'favorites', FavoriteViewSet, basename='favorite')
+router.register(r'comments', CommentViewSet, basename='comment')
+router.register(r'video-interactions', VideoInteractionViewSet, basename='video-interaction')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

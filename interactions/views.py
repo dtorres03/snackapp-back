@@ -7,10 +7,11 @@ guardados.
 """
 
 from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
-from .models import Favorite
-from .serializers import FavoriteSerializer
+from .models import Favorite, Comment, VideoLike
+from .serializers import FavoriteSerializer, CommentSerializer
 
 class FavoriteViewSet(viewsets.ModelViewSet):
     """
@@ -112,3 +113,48 @@ class FavoriteViewSet(viewsets.ModelViewSet):
         intento de suplantación desde el cuerpo del JSON.
         """
         serializer.save(user=self.request.user)
+        
+class CommentViewSet(viewsets.ModelViewSet):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        # Así el comentario queda ligado automáticamente al usuario logueado
+        serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        # Permite filtrar comentarios por video: /api/interactions/comments/?video_id=#uuid
+        video_id = self.request.query_params.get('video_id')
+        if video_id:
+            return self.queryset.filter(video_id=video_id)
+        return self.queryset
+    
+    # Endpoint para dar/quitar like: POST /api/comments/{id}/like/
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def like(self, request, pk=None):
+        comment = self.get_object()
+        user = request.user
+
+        if user in comment.likes.all():
+            comment.likes.remove(user)
+            return Response({'status': 'unliked', 'likes_count': comment.total_likes}, status=status.HTTP_200_OK)
+        else:
+            comment.likes.add(user)
+            return Response({'status': 'liked', 'likes_count': comment.total_likes}, status=status.HTTP_200_OK)
+               
+class VideoInteractionViewSet(viewsets.GenericViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['post'], url_path='toggle-like')
+    def toggle_like(self, request):
+        video_id = request.data.get('video_id')
+        user = request.user
+        
+        try:
+            like = VideoLike.objects.get(user=user, video_id=video_id)
+            like.delete()
+            return Response({'status': 'unliked'}, status=status.HTTP_200_OK)
+        except VideoLike.DoesNotExist:
+            VideoLike.objects.create(user=user, video_id=video_id)
+            return Response({'status': 'liked'}, status=status.HTTP_201_CREATED)

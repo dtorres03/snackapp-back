@@ -71,7 +71,7 @@ Si vas a clonar este proyecto por primera vez, sigue estos pasos:
 > ⚠️ **IMPORTANTE:** Todas las URLs deben terminar en `/` (trailing slash). 
 > De lo contrario, Django podría devolver un error 404 o 500 al realizar peticiones `PATCH` o `POST`.
 >
-> **Ejemplo correcto:** `https://snakapp.co/users/550e8400-e29b-4114-a432-444666540102/`
+> **Ejemplo correcto:** `https://snakapp.co/api/users/550e8400-e29b-4114-a432-444666540102/`
 
 ## 🧪 Pruebas en Postman
 

@@ -115,6 +115,11 @@ class FavoriteViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
         
 class CommentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para la gestión integral de comentarios.
+    Proporciona operaciones estándar CRUD y funcionalidades extendidas para
+    el filtrado por video y gestión de likes individuales.
+    """
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -133,6 +138,11 @@ class CommentViewSet(viewsets.ModelViewSet):
     # Endpoint para dar/quitar like: POST /api/comments/{id}/like/
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def like(self, request, pk=None):
+        """
+        Endpoint personalizado para alternar (toggle) el like en un comentario.
+        Ruta: POST /api/comments/{id}/like/
+        Retorna: Estado de la acción ('liked'/'unliked') y el conteo actualizado.
+        """
         comment = self.get_object()
         user = request.user
 
@@ -148,6 +158,11 @@ class VideoInteractionViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=['post'], url_path='toggle-like')
     def toggle_like(self, request):
+        """
+        Gestiona la creación o eliminación de un like en un video específico.
+        Payload: { "video_id": <UUID> }
+        Comportamiento: Si el like existe, lo elimina; de lo contrario, lo crea.
+        """
         video_id = request.data.get('video_id')
         user = request.user
         

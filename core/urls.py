@@ -1,41 +1,25 @@
 """
-Módulo de Enrutamiento Central - SnackApp API.
+Módulo de Enrutamiento Central - SnakApp API.
 
-Este archivo centraliza la definición de rutas para el backend de SnackApp. 
+Este archivo centraliza la definición de rutas para el backend de SnakApp. 
 Utiliza una arquitectura híbrida que combina rutas manuales para servicios 
 de infraestructura (Admin, Auth, Docs) y un `DefaultRouter` para la exposición 
 automática de los ViewSets de la lógica de negocio.
 
 Arquitectura de Rutas:
-    1. Servicios de Infraestructura:
-        - /admin/ : Punto de entrada al panel de administración de Django.
-        - /api/login/ : Endpoint de autenticación (SimpleJWT).
-        - /api/token/refresh/ : Renovación de tokens de acceso expirados.
-        
-    2. Documentación OpenAPI 3.0:
-        - /api/schema/ : Generación dinámica del esquema técnico (YAML/JSON).
-        - /api/docs/ : Interfaz interactiva de Swagger UI para pruebas.
-        - /api/redoc/ : Documentación técnica estática vía Redoc.
-
-    3. Endpoints de Negocio (Auto-generados vía Router):
-        - /api/users/ : Gestión de perfiles de usuario.
-        - /api/videos/ : Catálogo de contenido multimedia.
-        - /api/categories/ : Clasificación de contenido.
-        - /api/series/ : Agrupación de episodios y temporadas.
-        - /api/favorites/ : Gestión de preferencias del usuario.
-
-Configuración de Archivos Estáticos:
-    En modo DEBUG, el servidor expone la ruta `media/` para el servicio directo 
-    de archivos de video y miniaturas almacenados localmente.
+    1. Servicios de Infraestructura: Admin, Auth (JWT).
+    2. Documentación OpenAPI 3.0: Swagger, Redoc y Esquema técnico.
+    3. Endpoints de Negocio: Gestión de usuarios, contenido y social.
 
 Seguridad:
-    Implementa validación de tokens Bearer JWT y filtrado de integridad 
-    basado en UUIDs como claves primarias en todos los recursos.
+    - Validación de tokens Bearer JWT.
+    - Filtrado de integridad basado en UUIDs.
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from core.media_serve import ranged_file_response
 from rest_framework.routers import DefaultRouter
 from users.views import UserViewSet
 from videos.views import VideoViewSet, CategoryViewSet, SeriesViewSet
@@ -46,7 +30,14 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
-# El router crea las URLs del CRUD automáticamente
+
+"""
+Instanciación del DefaultRouter de Django REST Framework.
+El router se encarga de generar automáticamente las URLs para las operaciones 
+estándar CRUD (List, Create, Retrieve, Update, Delete) y acciones personalizadas 
+(@action) definidas en los ViewSets.
+"""
+
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'videos', VideoViewSet, basename='video')
@@ -73,12 +64,15 @@ urlpatterns = [
 
 ]
 
-from django.urls import re_path
-from core.media_serve import ranged_file_response
-
-# Esto permite que media/videos/video.mp4 sea accesible vía HTTP con soporte para iOS
+#
 if settings.DEBUG:
-    # Removemos el slash inicial de MEDIA_URL si existe para la regex
+    """
+    Servicio de archivos estáticos y media en entorno de desarrollo.
+    Se utiliza 'ranged_file_response' en lugar del servidor estático estándar 
+    de Django para soportar peticiones por rangos de bytes (HTTP Range Requests).
+    Esto es crítico para la reproducción de video fluida y compatibilidad con 
+    el reproductor nativo de iOS.
+    """
     media_url = settings.MEDIA_URL.lstrip('/')
     urlpatterns += [
         re_path(rf'^{media_url}(?P<path>.*)$', ranged_file_response, {'document_root': settings.MEDIA_ROOT}),

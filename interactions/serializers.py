@@ -37,6 +37,11 @@ class FavoriteSerializer(serializers.ModelSerializer):
         read_only_fields = ['user']
         
 class CommentSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el sistema de comentarios y respuestas anidadas.
+    Maneja la lógica de perfiles de usuario, contadores de engagement y la 
+    recursividad controlada para mostrar respuestas a comentarios principales.
+    """
     user_username = serializers.ReadOnlyField(source='user.username')
     user_avatar = serializers.SerializerMethodField()
     likes_count = serializers.ReadOnlyField(source='total_likes')
@@ -55,6 +60,9 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only_fields = ['user']
 
     def get_user_avatar(self, obj):
+        """
+        Obtiene la URL absoluta del avatar del usuario desde el modelo Profile.
+        """
         request = self.context.get('request')
         # Buscamos la imagen en el modelo relacionado (ejemplo: Profile)
         if hasattr(obj.user, 'profile') and obj.user.profile.image:
@@ -62,6 +70,11 @@ class CommentSerializer(serializers.ModelSerializer):
         return None
 
     def get_replies(self, obj):
+        """
+        Recupera las respuestas anidadas de un comentario.
+        Nota Técnica: La recursividad se limita a un nivel (comentario raíz -> respuestas)
+        para prevenir cargas pesadas y estructuras JSON excesivamente profundas.
+        """
         # Solo mostramos respuestas si el comentario es un 'padre' (parent=None)
         # Esto evita hilos infinitos que rompen el JSON
         if obj.parent is None:

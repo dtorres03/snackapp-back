@@ -1,8 +1,9 @@
 """
-Modelos para la aplicación de Interacciones.
+Modelos para la aplicación de Interacciones - SnakApp.
 
 Este módulo define las estructuras de datos para las interacciones sociales 
-entre usuarios y contenido, como el sistema de favoritos y feedback.
+entre usuarios y contenido, incluyendo sistemas de favoritos, comentarios 
+anidados (respuestas) y likes tanto en videos como en comentarios.
 """
 
 import uuid
@@ -53,6 +54,12 @@ class Favorite(models.Model):
         return f"{self.user.username} - {self.video.title}"
     
 class Comment(models.Model):
+    """
+    Gestiona los comentarios de los videos y sus respuestas anidadas.
+
+    Soporta una estructura jerárquica mediante la autoreferencia 'parent'.
+    Si 'parent' es null, se considera un comentario raíz.
+    """
     video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     content = models.TextField()
@@ -89,6 +96,9 @@ class Comment(models.Model):
         return self.parent is not None
     
 class VideoLike(models.Model):
+    """
+    Modelo dedicado a cuantificar la aceptación de los videos.
+    """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     video = models.ForeignKey('videos.Video', on_delete=models.CASCADE, related_name='video_likes')
     created_at = models.DateTimeField(auto_now_add=True)

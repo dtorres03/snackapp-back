@@ -64,6 +64,9 @@ class VideoSerializer(serializers.ModelSerializer):
     is_unlocked = serializers.SerializerMethodField()
     is_favorite = serializers.SerializerMethodField()
     
+    likes_count = serializers.IntegerField(source='video_likes.count', read_only=True)
+    user_has_liked = serializers.SerializerMethodField()
+    
     class Meta:
         model = Video
         fields = [
@@ -75,6 +78,7 @@ class VideoSerializer(serializers.ModelSerializer):
             'video_path', 'thumbnail_path', 
             'category_id', 'category_name',
             'user_id' ,'username',
+            'likes_count', 'user_has_liked',
             'created_at'
         ]
         extra_kwargs = {'user': {'read_only': True}}
@@ -108,6 +112,12 @@ class VideoSerializer(serializers.ModelSerializer):
             # esto devolverá False y Postman lo mostrará actualizado.
             return Favorite.objects.filter(user=user, video=obj).exists()
         return False
+    
+    def get_user_has_liked(self, obj):
+        user = self.context.get('request').user
+        if user.is_authenticated:
+            return obj.video_likes.filter(user=user).exists()
+        return False
 
 class SeriesVideoSerializer(serializers.ModelSerializer):
     """
@@ -135,6 +145,9 @@ class SeriesVideoSerializer(serializers.ModelSerializer):
     
     is_unlocked = serializers.SerializerMethodField()
     is_favorite = serializers.SerializerMethodField()
+    
+    likes_count = serializers.IntegerField(source='video_likes.count', read_only=True)
+    user_has_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Video
@@ -147,6 +160,7 @@ class SeriesVideoSerializer(serializers.ModelSerializer):
             'video_path', 'thumbnail_path', 
             'category_id', 'category_name',
             'user_id' ,'username',
+            'likes_count', 'user_has_liked',
             'created_at'
         ]
         extra_kwargs = {'user': {'read_only': True}}
@@ -172,6 +186,12 @@ class SeriesVideoSerializer(serializers.ModelSerializer):
             # Aquí es donde ocurre la magia: si eliminaste el registro, 
             # esto devolverá False y Postman lo mostrará actualizado.
             return Favorite.objects.filter(user=user, video=obj).exists()
+        return False
+    
+    def get_user_has_liked(self, obj):
+        user = self.context.get('request').user
+        if user.is_authenticated:
+            return obj.video_likes.filter(user=user).exists()
         return False
 
 

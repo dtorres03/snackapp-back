@@ -53,7 +53,7 @@ USE_X_FORWARDED_PORT = True
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['93.188.164.97', 'localhost', '127.0.0.1', 'snakapp.co']
 
@@ -130,7 +130,7 @@ load_dotenv()
 
 # Sustituye tus configuraciones estáticas
 SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = os.getenv('DEBUG') == 'False'
+DEBUG = os.getenv('DEBUG') == 'True'
 
 DATABASES = {
     'default': {

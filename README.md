@@ -1,4 +1,4 @@
-# 🚀 SnackApp Backend - API REST
+# 🚀 SnakApp Backend - API REST
 
 Este es el núcleo de servicios para la plataforma de streaming y gestión de contenido. Construido con las últimas versiones de Python y Django, implementa un sistema de autenticación robusta mediante **JWT** y un CRUD completo de usuarios con permisos granulares de propiedad.
 
@@ -32,13 +32,12 @@ Si vas a clonar este proyecto por primera vez, sigue estos pasos:
 2. **Configura variables de entorno:**
    #### Crea un archivo .env en la raíz del proyecto basándote en el siguiente esquema:
    ```bash
-   DB_NAME=dbname
-   DB_USER=usuario
-   DB_PASSWORD=contraseña
-   DB_HOST=localhost
-   DB_PORT=5432
-   SECRET_KEY=tu_django_secret_key
-   DEBUG=True
+   DB_NAME=<DB_NAME>
+   DB_USER=<DB_USER>
+   DB_PASSWORD=<DB_PASSWORD>
+   DB_HOST=<DB_HOST>
+   DB_PORT=<DB_PORT>
+   SECRET_KEY=<DJANGO_SECRET_KEY>
 3. **Crear y activar el entorno virtual:**
    ```bash
    python -m venv venv
@@ -59,42 +58,62 @@ Si vas a clonar este proyecto por primera vez, sigue estos pasos:
 
 ## 📡 Endpoints Principales (API)
 
-| Método | Endpoint | Descripción | Auth Requerida |
-| :--- | :--- | :--- | :--- |
-| **POST** | `/api/users/` | Registro de nuevo usuario (Sign up) | No |
-| **POST** | `/api/login/` | Obtener Tokens Access y Refresh (Login) | No |
-| **POST** | `/api/token/refresh/` | Generar nuevo Access Token | Refresh Token |
-| **GET** | `/api/users/` | Listar todos los usuarios registrados | Token Access |
-| **GET** | `/api/users/{id}/` | Ver detalle de un usuario específico | Token Access |
-| **PATCH** | `/api/users/{id}/` | Actualizar perfil (Solo Dueño o Admin) | Token Access |
-| **DELETE** | `/api/users/{id}/` | Eliminar cuenta (Solo Dueño o Admin) | Token Access |
-| **GET** | `/api/videos/` | Listar catálogo de videos | Token Access |
-| **GET** | `/api/favorites/` | Listar videos favoritos | Token Access |
-| **POST** | `/api/favorites/` | Guardar video en favoritos | Token Access |
+| Recurso | Endpoint | Descripción |
+| :--- | :--- | :--- |
+| **Usuarios** | `/api/users/` | Perfiles y cuentas de usuario. |
+| **Videos** | `/api/videos/` | Catálogo de contenido multimedia. |
+| **Categorías** | `/api/categories/` | Filtros por género y etiquetas. |
+| **Series** | `/api/series/` | Agrupación de episodios y temporadas. |
+| **Favoritos** | `/api/favorites/` | Marcadores de contenido personal. |
+| **Comentarios** | `/api/comments/` | Comentarios y respuestas anidadas. |
+| **Interacciones** | `/api/video-interactions/` | Lógica de likes y reacciones. |
 
 > ⚠️ **IMPORTANTE:** Todas las URLs deben terminar en `/` (trailing slash). 
 > De lo contrario, Django podría devolver un error 404 o 500 al realizar peticiones `PATCH` o `POST`.
 >
-> **Ejemplo correcto:** `http://127.0.0.1:8000/api/users/550e8400-e29b-4114-a432-444666540102/`
+> **Ejemplo correcto:** `https://snakapp.co/api/users/550e8400-e29b-4114-a432-444666540102/`
 
 ## 🧪 Pruebas en Postman
 
-1. Login: Envía un POST a /api/login/ con email y password.
+### 🔑 Autenticación (JWT)
+- **Login**: `POST /api/login/` -> `{ "username": "tu_usuario", "password": "tu_password" }`
+- **Refresh**: `POST /api/token/refresh/` -> `{ "refresh": "<REFRESH_TOKEN>" }`
+- **Nota**: Para el resto de peticiones, añade el Header: `Authorization: Bearer <ACCESS_TOKEN>`.
 
-2. Autorización: Copia el valor de access.
+### 📺 Catálogo y Contenido
+- **Listar Videos**: `GET /api/videos/`
+- **Buscar Video**: `GET /api/videos/?search=nombre_o_categoría`
+- **Filtrar por Serie**: `GET /api/videos/?serie=<ID_SERIE>`
+- **Detalle de Video**: `GET /api/videos/<ID_VIDEO>/` (Incluye contadores y si el usuario actual dio like).
 
-3. Headers: En las peticiones protegidas, ve a la pestaña Auth, selecciona Bearer Token y pega el código.
+### 💬 Comentarios y Respuestas
+- **Comentario Principal**: `POST /api/comments/` -> `{ "video": <ID>, "content": "Texto" }`
+- **Responder a Comentario**: `POST /api/comments/` -> `{ "video": <ID>, "content": "Respuesta", "parent": <ID_PADRE> }`
+- **Like a un Comentario**: `POST /api/comments/<ID_COMENTARIO>/like/`
 
-4. Validación: Si intentas editar un ID ajeno con un token de usuario normal, recibirás un 403 Forbidden.
+### 🌐 Interacciones y Social
+- **Like/Unlike Video**: `POST /api/video-interactions/toggle-like/` -> `{ "video_id": <ID_VIDEO> }`
+- **Agregar a Favoritos**: `POST /api/favorites/` -> `{ "video": <ID_VIDEO> }`
+- **Listar mis Favoritos**: `GET /api/favorites/`
+- **Eliminar de Favoritos**: `DELETE /api/favorites/<ID_FAVORITO>/`
+
+### 🎬 Series y Categorías
+- **Listar Series**: `GET /api/series/`
+- **Detalle de Serie**: `GET /api/series/<ID_SERIE>/` (Muestra la lista de episodios vinculados).
+- **Listar Categorías**: `GET /api/categories/`
 
 ## 📂 Estructura del Repositorio
 
-* requirements.txt: Lista de dependencias (Django 6.0.3, DRF, SimpleJWT).
+* **requirements.txt**: Lista de dependencias del proyecto, incluyendo Django 6.0.3, Django REST Framework, SimpleJWT para autenticación y drf-spectacular para documentación.
 
-* core/: Configuración principal del proyecto.
+* **core/**: Corazón del proyecto. Contiene la configuración global (`settings.py`), el enrutamiento central (`urls.py`) y utilitarios transversales como `media_serve.py` para el manejo de video en desarrollo.
 
-* users/: Aplicación de lógica de usuarios y autenticación.
+* **users/**: Gestión de perfiles y seguridad. Contiene la lógica de autenticación, el modelo de usuario personalizado, y los ViewSets para el registro y actualización de perfiles.
 
-* videos/: Modelos de Category, Serie y Video (Episodios).
+* **videos/**: Núcleo del catálogo multimedia. Define la estructura de contenidos mediante los modelos de `Category` (géneros), `Series` (agrupaciones de temporadas) y `Video` (episodios individuales con soporte de streaming).
 
-* interactions/: Lógica de favoritos y feedback de usuario.
+* **interactions/**: Módulo de engagement social. Gestiona la lógica de `Favorites` para el guardado de contenido y `Comments` con soporte para respuestas anidadas y likes individuales por comentario.
+
+* **media/**: Directorio local (excluido en producción) que almacena los archivos físicos de video y miniaturas para pruebas de streaming y ranged requests.
+
+* **manage.py**: Herramienta de línea de comandos de Django para tareas administrativas, migraciones y ejecución del servidor de desarrollo.

@@ -8,8 +8,10 @@ formateo de identificadores y gestión de unicidad de correos electrónicos.
 
 from rest_framework import serializers
 from .models import CustomUser
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
 import re
 
 class UserSerializer(serializers.ModelSerializer):
@@ -152,16 +154,42 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
     
-class EmailOrUsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
-    # 1. Definimos 'username' como un CharField genérico. 
-    # Aunque se llame 'username', este campo recibirá el texto que ponga el usuario (sea email o username)
-    email = serializers.CharField(write_only=True, required=True)
+class EmailOrUsernameTokenObtainPairSerializer(serializers.Serializer):
+    """
+    Serializador nativo personalizado para SnackApp.
+    Desacoplado de la herencia de Simple JWT para dar soporte real y flexible
+    a las llaves 'username' o 'email' sin restricciones del backend.
+    """
+    # Declaramos los campos como texto plano totalmente opcionales a nivel de formato
+    username = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    email = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, required=True)
 
     def validate(self, attrs):
-        # 2. Simple JWT necesita que el string quede mapeado en la clave interna 'username_field'
-        # antes de pasárselo a nuestro backend personalizado.
-        attrs[self.username_field] = attrs.get('email')
-        
-        # 3. Se ejecuta la validación nativa que llamará a nuestro EmailOrUsernameModelBackend
-        data = super().validate(attrs)
-        return data
+        # 1. Extraemos el string de cualquier llave que use el frontend
+        login_input = attrs.get("username") or attrs.get("email")
+        password = attrs.get("password")
+
+        if not login_input:
+            raise ValidationError({
+                "error": "Es obligatorio proporcionar el campo 'username' o 'email' para iniciar sesión."
+            })
+
+        # 2. Invocamos manualmente a la función authenticate() de Django.
+        # Esto llamará directo a tu 'EmailOrUsernameModelBackend' en backends.py
+        user = authenticate(username=login_input, password=password)
+
+        # 3. Si el backend de autenticación devuelve None, las credenciales son inválidas
+        if not user:
+            raise AuthenticationFailed({
+                "detail": "No se encontró ninguna cuenta activa con las credenciales provistas"
+            })
+
+        # 4. Generamos manualmente los tokens JWT usando la API nativa de Simple JWT
+        refresh = RefreshToken.for_user(user)
+
+        # 5. Estructuramos la respuesta idéntica a como la entrega Simple JWT originalmente
+        return {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }

@@ -170,5 +170,14 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
 class LoginView(TokenObtainPairView):
-    # Le decimos a la vista de Simple JWT que use nuestra lógica flexible
+    # Asignamos nuestro nuevo serializador independiente
     serializer_class = EmailOrUsernameTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        
+        # Si las credenciales fallan, DRF disparará automáticamente el 401 o 400 estructurado
+        serializer.is_valid(raise_exception=True)
+        
+        # Retornamos los tokens generados con un código 200 OK
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)

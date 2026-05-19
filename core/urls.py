@@ -21,7 +21,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from core.media_serve import ranged_file_response
 from rest_framework.routers import DefaultRouter
-from users.views import UserViewSet
+from users.views import UserViewSet, LoginView
 from videos.views import VideoViewSet, CategoryViewSet, SeriesViewSet
 from interactions.views import FavoriteViewSet, CommentViewSet, VideoInteractionViewSet
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
@@ -49,7 +49,7 @@ router.register(r'video-interactions', VideoInteractionViewSet, basename='video-
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/login/', LoginView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/', include(router.urls)),
     

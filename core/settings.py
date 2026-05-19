@@ -208,6 +208,11 @@ SIMPLE_JWT = {
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
+AUTHENTICATION_BACKENDS = [
+    'users.authentication.EmailOrUsernameModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 # Configuración básica de la documentación
 SPECTACULAR_SETTINGS = {
     'TITLE': 'SnackApp API',

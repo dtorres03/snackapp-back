@@ -11,6 +11,8 @@ from rest_framework.response import Response
 from .models import CustomUser
 from .serializers import UserSerializer
 from rest_framework.decorators import action
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import EmailOrUsernameTokenObtainPairSerializer
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -166,3 +168,7 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+    
+class LoginView(TokenObtainPairView):
+    # Le decimos a la vista de Simple JWT que use nuestra lógica flexible
+    serializer_class = EmailOrUsernameTokenObtainPairSerializer

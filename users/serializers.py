@@ -9,6 +9,7 @@ formateo de identificadores y gestión de unicidad de correos electrónicos.
 from rest_framework import serializers
 from .models import CustomUser
 from rest_framework.exceptions import ValidationError
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 import re
 
 class UserSerializer(serializers.ModelSerializer):
@@ -150,3 +151,17 @@ class UserSerializer(serializers.ModelSerializer):
             
         instance.save()
         return instance
+    
+class EmailOrUsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
+    # 1. Definimos 'username' como un CharField genérico. 
+    # Aunque se llame 'username', este campo recibirá el texto que ponga el usuario (sea email o username)
+    email = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, attrs):
+        # 2. Simple JWT necesita que el string quede mapeado en la clave interna 'username_field'
+        # antes de pasárselo a nuestro backend personalizado.
+        attrs[self.username_field] = attrs.get('email')
+        
+        # 3. Se ejecuta la validación nativa que llamará a nuestro EmailOrUsernameModelBackend
+        data = super().validate(attrs)
+        return data

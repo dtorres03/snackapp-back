@@ -28,7 +28,7 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    tokens = models.PositiveIntegerField(default=100)
+    tokens = models.PositiveIntegerField(default=10000)
 
     # Configuración de credenciales
     USERNAME_FIELD = 'email'

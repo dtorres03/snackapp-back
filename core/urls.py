@@ -64,7 +64,6 @@ urlpatterns = [
 
 ]
 
-#
 if settings.DEBUG:
     """
     Servicio de archivos estáticos y media en entorno de desarrollo.

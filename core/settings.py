@@ -45,6 +45,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Esta es la URL pública para acceder a ellos desde el navegador/Postman
 MEDIA_URL = 'https://snakapp.co/media/'
 
+# Ruta absoluta para archivos multimedia privados/protegidos (Videos bajo X-Accel-Redirect)
+PROTECTED_MEDIA_ROOT = BASE_DIR / 'media' / 'protected_media'
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True

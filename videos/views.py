@@ -204,11 +204,6 @@ class VideoViewSet(viewsets.ModelViewSet):
             video.cost == 0 or 
             video.users_with_access.filter(id=user.id).exists()
         )
-        file_name = os.path.basename(video.video_file.name)
-        file_path = os.path.join(settings.PROTECTED_MEDIA_ROOT, 'videos', file_name)
-
-        # --- IMPRIME ESTO PARA VER LA RUTA EXACTA EN LA CONSOLA DE DJANGO ---
-        print(f"DEBUG LOCAL -> Buscando video en la ruta: {file_path}")
 
         if not has_access:
             return Response(
@@ -224,12 +219,20 @@ class VideoViewSet(viewsets.ModelViewSet):
             raise Http404("El archivo de video no se encuentra registrado en el almacenamiento.")
 
         if settings.DEBUG:
-            return FileResponse(open(file_path, 'rb'), content_type='video/mp4')
+            # En local puedes retornar la ruta relativa o absoluta local
+            relative_path = f"/media/protected_media/videos/{file_name}"
+        else:
+            # En producción retornas la ruta protegida que Nginx o tu reproductor usará
+            relative_path = f"/protected_media/videos/{file_name}"
 
-        response = HttpResponse()
-        response['Content-Type'] = 'video/mp4'
-        response['X-Accel-Redirect'] = f'/protected_media/videos/{file_name}'
-        return response
+        return Response(
+            {
+                "id": str(video.id),
+                "title": video.title,
+                "video_path": relative_path
+            },
+            status=status.HTTP_200_OK
+        )
 
     def list(self, request):
         """

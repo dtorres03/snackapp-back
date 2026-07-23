@@ -58,7 +58,11 @@ USE_X_FORWARDED_PORT = True
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['93.188.164.97', 'localhost', '127.0.0.1', 'snakapp.co']
+ALLOWED_HOSTS = ['93.188.164.97', 
+                 'localhost', 
+                 '127.0.0.1', 
+                 'snakapp.co',
+]
 
 
 # Application definition

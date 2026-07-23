@@ -17,6 +17,9 @@ from django.db.models import Q
 from django.db import transaction
 from rest_framework.decorators import action
 from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.http import HttpResponse, FileResponse, Http404
+import os
 
 class CategoryViewSet(viewsets.ModelViewSet):
     """
@@ -180,6 +183,56 @@ class VideoViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'], url_path='play', permission_classes=[permissions.IsAuthenticated])
+    def stream(self, request, pk=None):
+        """
+        Endpoint seguro para la reproducción de video.
+        
+        URL: GET /api/videos/<pk>/play/
+        
+        Valida la autenticación mediante JWT y confirma que el usuario sea el autor 
+        o que tenga el video desbloqueado en 'users_with_access'.
+        
+        En entorno de desarrollo (DEBUG=True), entrega el binario vía FileResponse.
+        En entorno de producción (DEBUG=False), delega la entrega a Nginx usando X-Accel-Redirect.
+        """
+        video = self.get_object()
+        user = request.user
+        has_access = (
+            video.user == user or 
+            video.cost == 0 or 
+            video.users_with_access.filter(id=user.id).exists()
+        )
+
+        if not has_access:
+            return Response(
+                {"detail": "No tienes acceso a este video. Debes desbloquearlo primero."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        file_name = os.path.basename(video.video_file.name) if hasattr(video, 'video_file') and video.video_file else str(video.file_name)
+        
+        file_path = os.path.join(settings.PROTECTED_MEDIA_ROOT, 'videos', file_name)
+
+        if not os.path.exists(file_path):
+            raise Http404("El archivo de video no se encuentra registrado en el almacenamiento.")
+
+        if settings.DEBUG:
+            # En local puedes retornar la ruta relativa o absoluta local
+            relative_path = f"/media/protected_media/videos/{file_name}"
+        else:
+            # En producción retornas la ruta protegida que Nginx o tu reproductor usará
+            relative_path = f"/protected_media/videos/{file_name}"
+
+        return Response(
+            {
+                "id": str(video.id),
+                "title": video.title,
+                "video_path": relative_path
+            },
+            status=status.HTTP_200_OK
+        )
 
     def list(self, request):
         """

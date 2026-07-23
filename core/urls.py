@@ -64,7 +64,7 @@ urlpatterns = [
 
 ]
 
-#
+
 if settings.DEBUG:
     """
     Servicio de archivos estáticos y media en entorno de desarrollo.
@@ -73,7 +73,9 @@ if settings.DEBUG:
     Esto es crítico para la reproducción de video fluida y compatibilidad con 
     el reproductor nativo de iOS.
     """
+    
     media_url = settings.MEDIA_URL.lstrip('/')
     urlpatterns += [
         re_path(rf'^{media_url}(?P<path>.*)$', ranged_file_response, {'document_root': settings.MEDIA_ROOT}),
     ]
+    

@@ -3,6 +3,9 @@ media/videos/*
 media/thumbnails/*
 !media/thumbnails/.gitkeep
 
+media/protected_media/videos/*
+!mediaprotected_media/videos/.gitkeep
+
 # Virtual environment
 venv/
 env/

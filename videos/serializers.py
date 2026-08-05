@@ -83,23 +83,39 @@ class VideoSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {'user': {'read_only': True}}
         
+    def _has_access(self, obj):
+        """
+        Determina si el usuario actual tiene acceso al video.
+        El acceso se otorga al autor del video, a los contenidos gratuitos
+        o a los usuarios registrados en 'users_with_access' (compradores).
+        """
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
+            return False
+
+        if obj.user == request.user:
+            return True
+
+        if obj.cost == 0:
+            return True
+
+        return obj.users_with_access.filter(id=request.user.id).exists()
+
     def get_is_unlocked(self, obj):
         """
         Determina si el usuario actual ha desbloqueado este video.
         Si el usuario es el autor del video (uploader), el acceso es total.
         """
-        request = self.context.get('request')
-        if not request or request.user.is_anonymous:
-            return False
-            
-        if obj.user == request.user:
-            return True
-            
-        return obj.users_with_access.filter(id=request.user.id).exists()
-        
+        return self._has_access(obj)
+
     def get_video_path(self, obj):
-        """Extrae la ruta del archivo de video si existe."""
-        return obj.video_file.name if obj.video_file else None
+        """
+        Extrae la ruta del archivo de video solo si el usuario tiene acceso.
+        Evita exponer la ruta directa de videos de pago en el catálogo general.
+        """
+        if not obj.video_file or not self._has_access(obj):
+            return None
+        return obj.video_file.name
 
     def get_thumbnail_path(self, obj):
         """Extrae la ruta de la miniatura si existe."""
@@ -165,17 +181,36 @@ class SeriesVideoSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {'user': {'read_only': True}}
         
-    def get_is_unlocked(self, obj):
-        """Misma lógica: Autor o Comprador tienen acceso."""
+    def _has_access(self, obj):
+        """
+        Determina si el usuario actual tiene acceso al video.
+        El acceso se otorga al autor del video, a los contenidos gratuitos
+        o a los usuarios registrados en 'users_with_access' (compradores).
+        """
         request = self.context.get('request')
         if not request or request.user.is_anonymous:
             return False
+
         if obj.user == request.user:
             return True
+
+        if obj.cost == 0:
+            return True
+
         return obj.users_with_access.filter(id=request.user.id).exists()
 
+    def get_is_unlocked(self, obj):
+        """Misma lógica: Autor o Comprador tienen acceso."""
+        return self._has_access(obj)
+
     def get_video_path(self, obj):
-        return obj.video_file.name if obj.video_file else None
+        """
+        Extrae la ruta del archivo de video solo si el usuario tiene acceso.
+        Evita exponer la ruta directa de videos de pago en el catálogo general.
+        """
+        if not obj.video_file or not self._has_access(obj):
+            return None
+        return obj.video_file.name
 
     def get_thumbnail_path(self, obj):
         return obj.thumbnail.name if obj.thumbnail else None

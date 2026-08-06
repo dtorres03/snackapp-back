@@ -19,7 +19,9 @@ from rest_framework.decorators import action
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.http import HttpResponse, FileResponse, Http404
+from core.media_serve import ranged_file_response
 import os
+import mimetypes
 
 class CategoryViewSet(viewsets.ModelViewSet):
     """
@@ -211,7 +213,10 @@ class VideoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        file_name = os.path.basename(video.video_file.name) if hasattr(video, 'video_file') and video.video_file else str(video.file_name)
+        if not video.video_file:
+            raise Http404("El video no tiene un archivo asociado.")
+
+        file_name = os.path.basename(video.video_file.name)
         
         file_path = os.path.join(settings.PROTECTED_MEDIA_ROOT, 'videos', file_name)
 
@@ -219,20 +224,23 @@ class VideoViewSet(viewsets.ModelViewSet):
             raise Http404("El archivo de video no se encuentra registrado en el almacenamiento.")
 
         if settings.DEBUG:
-            # En local puedes retornar la ruta relativa o absoluta local
-            relative_path = f"/media/protected_media/videos/{file_name}"
-        else:
-            # En producción retornas la ruta protegida que Nginx o tu reproductor usará
-            relative_path = f"/protected_media/videos/{file_name}"
+            # Dev: sirve el binario directamente con soporte HTTP Range.
+            # El mismo URL funciona como src del reproductor (iOS AVPlayer).
+            return ranged_file_response(
+                request,
+                f"protected_media/videos/{file_name}",
+                document_root=settings.MEDIA_ROOT
+            )
 
-        return Response(
-            {
-                "id": str(video.id),
-                "title": video.title,
-                "video_path": relative_path
-            },
-            status=status.HTTP_200_OK
-        )
+        # Producción: delega la entrega a Nginx vía X-Accel-Redirect.
+        # Nginx intercepta la cabecera y sirve el archivo desde la ubicación
+        # interna /protected_media/, sin exponer la ruta real al cliente.
+        content_type = mimetypes.guess_type(file_path)[0] or 'application/octet-stream'
+        response = HttpResponse()
+        response['X-Accel-Redirect'] = f"/protected_media/videos/{file_name}"
+        response['Content-Type'] = content_type
+        response['Accept-Ranges'] = 'bytes'
+        return response
 
     def list(self, request):
         """

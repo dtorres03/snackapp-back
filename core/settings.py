@@ -43,7 +43,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Esta es la URL pública para acceder a ellos desde el navegador/Postman
-MEDIA_URL = 'https://snakapp.co/media/'
+MEDIA_URL = '/media/'
 
 # Ruta absoluta para archivos multimedia privados/protegidos (Videos bajo X-Accel-Redirect)
 PROTECTED_MEDIA_ROOT = BASE_DIR / 'media' / 'protected_media'
@@ -212,7 +212,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACK_LIST_AFTER_ROTATION': True,
+    'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
